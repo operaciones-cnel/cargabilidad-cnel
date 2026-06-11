@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cargabilidad Transformadores · CNEL EP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#0a0e1a; --bg-2:#111827; --bg-card:#161e2e; --bg-hover:#1c2638;
+  --border:#232f44; --border-light:#2d3a52;
+  --text:#e8edf5; --muted:#94a3b8; --dim:#64748b;
+  --accent:#fbbf24; --accent2:#f59e0b;
+  --crit:#ef4444; --crit-bg:rgba(239,68,68,0.12); --crit-border:rgba(239,68,68,0.35);
+  --alert:#f59e0b; --alert-bg:rgba(245,158,11,0.12); --alert-border:rgba(245,158,11,0.35);
+  --norm:#10b981; --norm-bg:rgba(16,185,129,0.12); --norm-border:rgba(16,185,129,0.35);
+  --blue:#3b82f6;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;line-height:1.5;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse at 20% 0%,rgba(251,191,36,0.05),transparent 50%),
+             radial-gradient(ellipse at 80% 100%,rgba(59,130,246,0.05),transparent 50%);}
+
+/* ── LAYOUT ── */
+.app{display:flex;flex-direction:column;min-height:100vh;position:relative;z-index:1;}
+
+/* ── HEADER ── */
+.header{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 32px;}
+.header-top{display:flex;justify-content:space-between;align-items:center;padding:16px 0 12px;}
+.brand-tag{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--accent);font-weight:500;}
+.brand-title{font-family:'Fraunces',serif;font-size:26px;font-weight:600;letter-spacing:-0.02em;color:var(--text);line-height:1.1;margin-top:3px;}
+.header-controls{display:flex;align-items:center;gap:16px;}
+.criterio-toggle{display:flex;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:3px;}
+.criterio-btn{background:none;border:none;color:var(--muted);padding:7px 16px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border-radius:6px;transition:all 0.2s;font-weight:600;}
+.criterio-btn.active{background:var(--accent);color:#0a0e1a;}
+
+/* ── NAV TABS ── */
+.nav-tabs{display:flex;gap:0;border-top:1px solid var(--border);}
+.nav-tab{background:none;border:none;color:var(--muted);padding:12px 24px;font-family:'Manrope',sans-serif;font-size:13px;font-weight:600;cursor:pointer;position:relative;transition:all 0.2s;border-bottom:2px solid transparent;letter-spacing:0.01em;}
+.nav-tab:hover{color:var(--text);}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.nav-tab .tab-icon{margin-right:7px;font-size:14px;}
+
+/* ── CONTENT ── */
+.content{flex:1;padding:28px 32px 60px;}
+
+/* ── KPIs ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px;}
+.kpi{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--blue);}
+.kpi.crit::before{background:var(--crit);}
+.kpi.alert::before{background:var(--alert);}
+.kpi.norm::before{background:var(--norm);}
+.kpi.warn::before{background:#8b5cf6;}
+.kpi-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);margin-bottom:8px;}
+.kpi-value{font-family:'Fraunces',serif;font-size:40px;font-weight:600;line-height:1;letter-spacing:-0.02em;}
+.kpi.crit .kpi-value{color:var(--crit);}
+.kpi.alert .kpi-value{color:var(--alert);}
+.kpi.norm .kpi-value{color:var(--norm);}
+.kpi-unit{font-size:14px;color:var(--muted);font-weight:500;margin-left:4px;}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:6px;}
+.kpi-delta{display:inline-block;padding:2px 7px;border-radius:5px;font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;margin-left:6px;}
+.kpi-delta.up{background:var(--crit-bg);color:var(--crit);}
+.kpi-delta.down{background:var(--norm-bg);color:var(--norm);}
+.kpi-delta.flat{background:var(--bg-2);color:var(--muted);}
+
+/* ── CARDS ── */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:22px;}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+.card-title{font-size:14px;font-weight:700;color:var(--text);}
+.card-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.card-tag{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:4px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.grid-asym{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;}
+
+/* ── CHART ── */
+.chart-wrap{position:relative;}
+.chart-wrap.h280{height:280px;}
+.chart-wrap.h320{height:320px;}
+.chart-wrap.h380{height:380px;}
+.chart-wrap.h420{height:420px;}
+
+/* ── SELECTOR MES ── */
+.mes-selector-wrap{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.mes-selector-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);}
+.mes-btns{display:flex;flex-wrap:wrap;gap:6px;}
+.mes-btn{background:var(--bg-2);border:1px solid var(--border);color:var(--muted);padding:6px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border-radius:6px;transition:all 0.2s;font-weight:600;}
+.mes-btn:hover{color:var(--text);border-color:var(--border-light);}
+.mes-btn.active{background:var(--accent);color:#0a0e1a;border-color:var(--accent);}
+.period-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.25);border-radius:16px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:600;letter-spacing:0.08em;}
+.period-badge-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);}
+
+/* ── SEMÁFORO UN ── */
+.semaforo-grid{display:flex;flex-direction:column;gap:8px;}
+.semaforo-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg-2);border-radius:9px;border:1px solid var(--border);cursor:pointer;transition:all 0.15s;}
+.semaforo-row:hover{border-color:var(--border-light);background:var(--bg-hover);}
+.semaforo-row.has-crit{border-left:3px solid var(--crit);}
+.semaforo-un{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--text);min-width:36px;}
+.semaforo-nombre{font-size:12px;font-weight:600;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.semaforo-chips{display:flex;gap:6px;align-items:center;}
+.chip{display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:14px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;}
+.chip.crit{background:var(--crit-bg);color:var(--crit);border:1px solid var(--crit-border);}
+.chip.alert{background:var(--alert-bg);color:var(--alert);border:1px solid var(--alert-border);}
+.chip.norm{background:var(--norm-bg);color:var(--norm);border:1px solid var(--norm-border);}
+.chip-zero{opacity:0.35;}
+.semaforo-bar{width:80px;height:5px;border-radius:3px;overflow:hidden;background:var(--bg-card);flex-shrink:0;}
+.semaforo-bar-fill{height:100%;display:flex;}
+.bar-crit{background:var(--crit);}
+.bar-alert{background:var(--alert);}
+.bar-norm{background:var(--norm);}
+
+/* ── TOP TABLE ── */
+.top-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.top-table thead{background:var(--bg-2);}
+.top-table th{padding:10px 12px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;color:var(--dim);text-transform:uppercase;font-weight:600;border-bottom:1px solid var(--border);}
+.top-table td{padding:10px 12px;border-bottom:1px solid var(--border);}
+.top-table tr:last-child td{border-bottom:none;}
+.top-table tbody tr{cursor:pointer;transition:background 0.15s;}
+.top-table tbody tr:hover{background:rgba(255,255,255,0.02);}
+.num{font-family:'JetBrains Mono',monospace;font-weight:500;}
+.badge{display:inline-block;padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:0.05em;}
+.badge.crit{background:var(--crit-bg);color:var(--crit);border:1px solid var(--crit-border);}
+.badge.alert{background:var(--alert-bg);color:var(--alert);border:1px solid var(--alert-border);}
+.badge.norm{background:var(--norm-bg);color:var(--norm);border:1px solid var(--norm-border);}
+.rank{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);font-weight:700;width:24px;text-align:right;}
+.cbar{width:60px;height:6px;background:var(--bg-2);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:8px;}
+.cbar-fill{height:100%;border-radius:3px;}
+
+/* ── MATRIZ COMPARATIVA ── */
+.year-selector{display:flex;gap:6px;margin-bottom:18px;}
+.year-btn{background:var(--bg-2);border:1px solid var(--border);color:var(--muted);padding:7px 16px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;border-radius:7px;transition:all 0.2s;font-weight:600;}
+.year-btn:hover{color:var(--text);}
+.year-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+.year-btn.active-2025{background:#8b5cf6;border-color:#8b5cf6;}
+
+.matriz-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:auto;}
+.matriz-table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap;}
+.matriz-table thead{background:var(--bg-2);position:sticky;top:0;z-index:5;}
+.matriz-table th{padding:12px 10px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;color:var(--dim);text-transform:uppercase;font-weight:600;border-bottom:1px solid var(--border);}
+.matriz-table th.row-label{text-align:left;min-width:160px;}
+.matriz-table td{padding:10px 10px;text-align:center;border-bottom:1px solid var(--border);}
+.matriz-table tr:last-child td{border-bottom:none;}
+.matriz-table td.row-label{text-align:left;font-weight:600;}
+.row-label-inner{display:flex;align-items:center;gap:8px;}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.dot.crit{background:var(--crit);}
+.dot.alert{background:var(--alert);}
+.dot.norm{background:var(--norm);}
+
+.mcell{display:inline-flex;flex-direction:column;align-items:center;cursor:pointer;padding:6px 12px;border-radius:7px;transition:all 0.2s;min-width:64px;}
+.mcell:hover{background:var(--bg-2);transform:scale(1.06);}
+.mcell .mnum{font-family:'Fraunces',serif;font-size:22px;font-weight:600;line-height:1;}
+.mcell.crit .mnum{color:var(--crit);}
+.mcell.alert .mnum{color:var(--alert);}
+.mcell.norm .mnum{color:var(--norm);}
+.mdelta{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-top:2px;}
+.mdelta.up{background:var(--crit-bg);color:var(--crit);}
+.mdelta.down{background:var(--norm-bg);color:var(--norm);}
+.mdelta.flat{background:var(--bg-2);color:var(--dim);}
+.mcell.ph{opacity:0.3;cursor:default;}
+.mcell.ph:hover{transform:none;background:none;}
+
+/* MATRIZ UN */
+.un-mcells{display:flex;gap:3px;justify-content:center;}
+.un-mcell{display:flex;flex-direction:column;align-items:center;padding:4px 7px;border-radius:6px;min-width:30px;cursor:pointer;transition:all 0.15s;}
+.un-mcell:hover{background:var(--bg-2);}
+.un-mcell .mn{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;}
+.un-mcell .ml{font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.08em;color:var(--dim);text-transform:uppercase;margin-top:1px;}
+.un-mcell.crit .mn{color:var(--crit);}
+.un-mcell.alert .mn{color:var(--alert);}
+.un-mcell.norm .mn{color:var(--norm);}
+.un-mcell.zero{opacity:0.3;cursor:default;}
+.un-mcell.zero:hover{background:transparent;}
+
+/* ── TOP POR UN CARDS ── */
+.topun-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+.topun-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;}
+.topun-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed var(--border);}
+.topun-name{font-family:'Fraunces',serif;font-size:16px;font-weight:600;}
+.topun-code{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:0.1em;}
+.topun-list{display:flex;flex-direction:column;gap:5px;}
+.topun-item{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--bg-2);border-radius:7px;cursor:pointer;transition:all 0.15s;font-size:12px;}
+.topun-item:hover{background:var(--bg-hover);}
+.topun-item-info{flex:1;min-width:0;}
+.topun-item-titulo{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.topun-item-mva{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:1px;}
+.topun-carg{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;padding:3px 8px;border-radius:5px;min-width:52px;text-align:center;}
+.topun-carg.crit{background:var(--crit-bg);color:var(--crit);}
+.topun-carg.alert{background:var(--alert-bg);color:var(--alert);}
+.topun-carg.norm{background:var(--norm-bg);color:var(--norm);}
+
+/* ── TIMELINE ── */
+.timeline-controls{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+input[type=text],select{background:var(--bg-2);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:7px;font-family:'Manrope',sans-serif;font-size:12px;outline:none;transition:border 0.2s;}
+input[type=text]:focus,select:focus{border-color:var(--accent);}
+.timeline-empty{padding:60px;text-align:center;color:var(--muted);font-size:13px;}
+
+/* ── LISTADO FILTERS ── */
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px 18px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;}
+.filter-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;color:var(--dim);text-transform:uppercase;}
+.pill{background:var(--bg-2);border:1px solid var(--border);padding:5px 12px;border-radius:12px;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;color:var(--muted);}
+.pill:hover{color:var(--text);}
+.pill.active-all{background:var(--accent);border-color:var(--accent);color:#0a0e1a;}
+.pill.active-crit{background:var(--crit-bg);border-color:var(--crit);color:var(--crit);}
+.pill.active-alert{background:var(--alert-bg);border-color:var(--alert);color:var(--alert);}
+.pill.active-norm{background:var(--norm-bg);border-color:var(--norm);color:var(--norm);}
+.btn-export{padding:8px 16px;background:var(--accent);color:#0a0e1a;border:none;border-radius:7px;cursor:pointer;font-weight:700;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;margin-left:auto;}
+.btn-export:hover{background:var(--accent2);}
+.table-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+table.main{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.main thead{background:var(--bg-2);position:sticky;top:0;z-index:5;}
+table.main th{padding:12px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;color:var(--dim);text-transform:uppercase;font-weight:600;border-bottom:1px solid var(--border);cursor:pointer;}
+table.main th:hover{color:var(--accent);}
+table.main td{padding:10px 14px;border-bottom:1px solid var(--border);}
+table.main tbody tr{cursor:pointer;transition:background 0.12s;}
+table.main tbody tr:hover{background:rgba(255,255,255,0.02);}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(5,8,15,0.85);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--bg-card);border:1px solid var(--border-light);border-radius:14px;max-width:1000px;width:100%;max-height:90vh;overflow-y:auto;padding:28px;}
+.modal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.modal-title{font-family:'Fraunces',serif;font-size:24px;font-weight:600;}
+.modal-sub{font-size:11px;color:var(--muted);margin-top:3px;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;}
+.close-btn{background:none;border:none;color:var(--muted);font-size:26px;cursor:pointer;padding:0;width:30px;height:30px;line-height:1;}
+.close-btn:hover{color:var(--accent);}
+.modal-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px;}
+.modal-stat{background:var(--bg-2);padding:14px 16px;border-radius:9px;border:1px solid var(--border);}
+.modal-stat-lbl{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:0.12em;margin-bottom:5px;text-transform:uppercase;}
+.modal-stat-val{font-family:'Fraunces',serif;font-size:22px;font-weight:600;}
+.modal-stat-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.modal-table-wrap{background:var(--bg-2);border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:420px;overflow-y:auto;}
+
+/* ── NORMA PANEL ── */
+.norma-panel{background:linear-gradient(135deg,var(--crit-bg),transparent);border:1px solid var(--crit-border);border-radius:10px;padding:16px 18px;margin-top:14px;}
+.norma-panel.alert{background:linear-gradient(135deg,var(--alert-bg),transparent);border-color:var(--alert-border);}
+.norma-panel.norm{background:linear-gradient(135deg,var(--norm-bg),transparent);border-color:var(--norm-border);}
+.norma-title{font-weight:700;font-size:12px;margin-bottom:8px;font-family:'JetBrains Mono',monospace;letter-spacing:0.08em;text-transform:uppercase;display:flex;align-items:center;gap:7px;}
+.norma-list{list-style:none;}
+.norma-list li{padding:5px 0 5px 20px;position:relative;font-size:12.5px;color:var(--text);}
+.norma-list li::before{content:'›';position:absolute;left:5px;color:var(--accent);font-weight:700;}
+
+/* ── PLACEHOLDER ── */
+.placeholder{background:linear-gradient(135deg,rgba(59,130,246,0.05),rgba(251,191,36,0.03));border:2px dashed var(--border-light);border-radius:14px;padding:40px;text-align:center;}
+.placeholder-icon{font-size:32px;margin-bottom:10px;opacity:0.4;}
+.placeholder-title{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin-bottom:5px;}
+.placeholder-sub{color:var(--muted);font-size:12px;max-width:440px;margin:0 auto;}
+
+footer{padding:20px 32px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace;letter-spacing:0.08em;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1200px){.kpi-row{grid-template-columns:repeat(3,1fr);}.grid-2,.grid-asym{grid-template-columns:1fr;}}
+@media(max-width:768px){.content{padding:16px;}.header{padding:0 16px;}.kpi-row{grid-template-columns:repeat(2,1fr);}.brand-title{font-size:20px;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="brand-tag">CNEL EP · Gerencia de Distribución · Dirección de Operaciones</div>
+      <div class="brand-title">Cargabilidad de Transformadores de Potencia</div>
+    </div>
+    <div class="header-controls">
+      <div class="criterio-toggle">
+        <button class="criterio-btn active" data-c="OA">OA · Sin ventilación</button>
+        <button class="criterio-btn" data-c="FOA">FOA · Con ventilación</button>
+      </div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-tab="ejecutivo"><span class="tab-icon">📊</span>Resumen Ejecutivo</button>
+    <button class="nav-tab" data-tab="comparativo"><span class="tab-icon">📅</span>Comparativo Mensual</button>
+    <button class="nav-tab" data-tab="detalle"><span class="tab-icon">🔍</span>Detalle Operativo</button>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- TAB 1: RESUMEN EJECUTIVO                               -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="tab-ejecutivo" class="tab-content">
+    <!-- Selector de mes -->
+    <div class="mes-selector-wrap">
+      <span class="mes-selector-label">Mes en análisis</span>
+      <div class="mes-btns" id="mesBtns"></div>
+      <span class="period-badge"><span class="period-badge-dot"></span><span id="periodoActualLabel"></span></span>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <!-- Gráfico evolución + Semáforo UN -->
+    <div class="grid-asym" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-tag">Evolución histórica · Todos los meses</div>
+            <div class="card-title">Transformadores críticos mes a mes</div>
+            <div class="card-sub">Serie completa disponible · Criterio seleccionado</div>
+          </div>
+        </div>
+        <div class="chart-wrap h280"><canvas id="chartEvolucion"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-tag">Semáforo por UN · <span id="semPeriodoLabel"></span></div>
+            <div class="card-title">Estado actual por Unidad de Negocio</div>
+          </div>
+        </div>
+        <div class="semaforo-grid" id="semaforoGrid"></div>
+      </div>
+    </div>
+
+    <!-- Top 10 + Gráfico OA vs FOA -->
+    <div class="grid-asym">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-tag">Mes seleccionado · <span id="top10PeriodoLabel"></span></div>
+            <div class="card-title">Top 15 transformadores con mayor cargabilidad</div>
+          </div>
+        </div>
+        <div style="overflow:auto;max-height:420px;">
+          <table class="top-table">
+            <thead>
+              <tr>
+                <th>#</th><th>UN</th><th>Subestación</th><th>Trafo</th><th>MVA</th><th>D.Máx</th><th>Cargabilidad</th><th>Nivel</th>
+              </tr>
+            </thead>
+            <tbody id="top15Body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-tag">Mes seleccionado</div>
+            <div class="card-title">OA vs FOA · Distribución</div>
+          </div>
+        </div>
+        <div class="chart-wrap h280"><canvas id="chartOAFOA"></canvas></div>
+        <div style="margin-top:14px;padding:14px;background:var(--bg-2);border-radius:9px;border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.6;">
+          <strong style="color:var(--text);">OA</strong> — Sin ventilación forzada. Capacidad nominal del transformador.<br>
+          <strong style="color:var(--text);">FOA</strong> — Con ventilación forzada activa. Capacidad máxima permitida.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- TAB 2: COMPARATIVO MENSUAL                             -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="tab-comparativo" class="tab-content" style="display:none;">
+
+    <!-- Sub-tabs dentro del comparativo -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+      <button class="year-btn active" data-subtab="totales">Totales por nivel</button>
+      <button class="year-btn" data-subtab="porun">Por Unidad de Negocio</button>
+      <button class="year-btn" data-subtab="interanual">Comparativo interanual</button>
+    </div>
+
+    <!-- Sub-tab: Totales -->
+    <div id="subtab-totales">
+      <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);">Año</span>
+        <div id="yearBtnsTotales" style="display:flex;gap:6px;"></div>
+      </div>
+      <div class="matriz-wrap">
+        <table class="matriz-table">
+          <thead><tr id="matrizTotalesHead"></tr></thead>
+          <tbody id="matrizTotalesBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Sub-tab: Por UN -->
+    <div id="subtab-porun" style="display:none;">
+      <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);">Año</span>
+        <div id="yearBtnsUN" style="display:flex;gap:6px;"></div>
+      </div>
+      <div class="matriz-wrap">
+        <table class="matriz-table">
+          <thead><tr id="matrizUNHead"></tr></thead>
+          <tbody id="matrizUNBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Sub-tab: Interanual -->
+    <div id="subtab-interanual" style="display:none;">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-tag">Comparativo entre años</div>
+            <div class="card-title">Mismo mes en diferentes años</div>
+            <div class="card-sub">Selecciona un mes para comparar entre todos los años disponibles</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;" id="mesInteranualBtns"></div>
+        <div class="chart-wrap h320"><canvas id="chartInteranual"></canvas></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- TAB 3: DETALLE OPERATIVO                               -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="tab-detalle" class="tab-content" style="display:none;">
+
+    <!-- Sub-tabs detalle -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+      <button class="year-btn active" data-subtab2="topun">Top por UN</button>
+      <button class="year-btn" data-subtab2="trafo">Línea de tiempo por trafo</button>
+      <button class="year-btn" data-subtab2="listado">Listado completo</button>
+      <button class="year-btn" data-subtab2="normas">Marco normativo</button>
+    </div>
+
+    <!-- Sub-tab: Top por UN -->
+    <div id="subtab2-topun">
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+        <div class="mes-selector-wrap" style="margin:0;">
+          <span class="mes-selector-label">Mes</span>
+          <div class="mes-btns" id="topUNMesBtns"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="filter-label">Top</span>
+          <select id="topUNCount"><option value="3">Top 3</option><option value="5" selected>Top 5</option><option value="10">Top 10</option></select>
+        </div>
+      </div>
+      <div class="topun-grid" id="topUNGrid"></div>
+    </div>
+
+    <!-- Sub-tab: Línea de tiempo -->
+    <div id="subtab2-trafo" style="display:none;">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-tag">Evolución temporal · Trafo individual</div>
+            <div class="card-title">Selecciona un transformador</div>
+          </div>
+        </div>
+        <div class="timeline-controls">
+          <input type="text" id="timelineSearch" style="flex:1;max-width:480px;" placeholder="Buscar... ej: GYE GUAYACANES T1">
+          <select id="timelineSelect" style="min-width:360px;"><option value="">— Selecciona un transformador —</option></select>
+        </div>
+        <div id="timelineContent">
+          <div class="timeline-empty">
+            <div style="font-size:32px;margin-bottom:10px;opacity:0.4;">📈</div>
+            <div>Selecciona un transformador para ver su evolución</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub-tab: Listado completo -->
+    <div id="subtab2-listado" style="display:none;">
+      <div class="mes-selector-wrap" style="margin-bottom:14px;">
+        <span class="mes-selector-label">Mes</span>
+        <div class="mes-btns" id="listadoMesBtns"></div>
+      </div>
+      <div class="filters">
+        <span class="filter-label">Nivel</span>
+        <div style="display:flex;gap:6px;" id="listadoPills">
+          <span class="pill active-all" data-niv="ALL">Todos</span>
+          <span class="pill" data-niv="CRITICO">Crítico</span>
+          <span class="pill" data-niv="ALERTA">Alerta</span>
+          <span class="pill" data-niv="NORMAL">Normal</span>
+        </div>
+        <span class="filter-label">UN</span>
+        <select id="listadoUN"><option value="ALL">Todas</option></select>
+        <input type="text" id="listadoSearch" placeholder="Buscar..." style="width:200px;">
+        <button class="btn-export" id="btnExportListado">↓ Exportar CSV</button>
+      </div>
+      <div class="table-wrap" style="max-height:520px;overflow-y:auto;">
+        <table class="main">
+          <thead>
+            <tr>
+              <th data-col="un">UN</th>
+              <th data-col="subestacion">Subestación</th>
+              <th data-col="trafo">Trafo</th>
+              <th data-col="mva_oa">MVA OA</th>
+              <th data-col="mva_foa">MVA FOA</th>
+              <th data-col="dem_max">D.Máx MW</th>
+              <th data-col="fp">FP</th>
+              <th data-col="carg_oa">% OA</th>
+              <th data-col="carg_foa">% FOA</th>
+              <th data-col="nivel_oa">Niv. OA</th>
+              <th data-col="nivel_foa">Niv. FOA</th>
+            </tr>
+          </thead>
+          <tbody id="listadoBody"></tbody>
+        </table>
+      </div>
+      <div style="padding:8px 14px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);background:var(--bg-card);border-radius:0 0 12px 12px;" id="listadoCount"></div>
+    </div>
+
+    <!-- Sub-tab: Normas -->
+    <div id="subtab2-normas" style="display:none;">
+      <div class="grid-2">
+        <div class="card">
+          <div class="norma-panel">
+            <div class="norma-title">🔴 Nivel Crítico · Cargabilidad ≥ 90%</div>
+            <ul class="norma-list">
+              <li>Estudio inmediato de repotenciación (sustitución por trafo de mayor MVA)</li>
+              <li>Adición de nuevo transformador en paralelo si la subestación tiene espacio</li>
+              <li>Estudio de factibilidad para nueva subestación si la zona está saturada</li>
+              <li>Transferencia de carga a subestaciones vecinas (corto plazo)</li>
+              <li>Activación de gestión de demanda en horas pico</li>
+              <li>Inclusión obligatoria en POA de inversiones del año en curso</li>
+            </ul>
+          </div>
+          <div class="norma-panel alert">
+            <div class="norma-title">🟠 Nivel Alerta · Cargabilidad 70 – 90%</div>
+            <ul class="norma-list">
+              <li>Estudio de proyección de demanda a 3-5 años</li>
+              <li>Identificar año estimado de cruce a zona crítica</li>
+              <li>Evaluación de generación distribuida fotovoltaica en zona</li>
+              <li>Reconfiguración de red MT (rebalanceo entre subestaciones)</li>
+              <li>Inclusión en plan plurianual de inversiones</li>
+              <li>Monitoreo trimestral de evolución de cargabilidad</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card">
+          <div class="norma-panel norm">
+            <div class="norma-title">🟢 Nivel Normal · Cargabilidad &lt; 70%</div>
+            <ul class="norma-list">
+              <li>Operación adecuada bajo criterios IEEE C57.91</li>
+              <li>Margen disponible para crecimiento natural de demanda</li>
+              <li>Capacidad para atender contingencias N-1 desde subestaciones vecinas</li>
+              <li>Monitoreo anual estándar de cargabilidad</li>
+            </ul>
+          </div>
+          <div style="margin-top:14px;padding:16px 18px;background:var(--bg-2);border-radius:10px;border:1px solid var(--border);">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;color:var(--accent);margin-bottom:10px;text-transform:uppercase;font-weight:600;">📚 Marco normativo</div>
+            <div style="font-size:12.5px;color:var(--text);line-height:1.8;">
+              <div><strong>IEEE C57.91-2011</strong> — Guía para carga de transformadores sumergidos en aceite mineral.</div>
+              <div style="margin-top:6px;"><strong>PME-ARCONEL</strong> — Plan Maestro de Electrificación. Umbral de planificación: 70%.</div>
+              <div style="margin-top:6px;"><strong>Regulación ARCONEL 008/2024</strong> — Distribución y comercialización de energía.</div>
+            </div>
+          </div>
+          <div class="placeholder" style="margin-top:14px;">
+            <div class="placeholder-icon">📈</div>
+            <div class="placeholder-title">Proyección de demanda</div>
+            <div class="placeholder-sub">Con datos históricos de 2+ años se habilitará el módulo de proyección CAGR a 1, 3 y 5 años.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- /content -->
+
+<footer>
+  <div>CNEL EP · GERENCIA DE DISTRIBUCIÓN · DIRECCIÓN DE OPERACIONES</div>
+  <div id="footerInfo"></div>
+</footer>
+
+</div><!-- /app -->
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+const DATA = __DATOS__;
+
+// ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
+let CRITERIO = 'OA';
+let PERIODO = DATA.periodos[DATA.periodos.length - 1];
+let TOP_UN_PERIODO = PERIODO;
+let TOP_UN_COUNT = 5;
+let LISTADO_PERIODO = PERIODO;
+let LISTADO_NIV = 'ALL';
+let LISTADO_UN = 'ALL';
+let LISTADO_TXT = '';
+let LISTADO_SORT = 'carg_foa';
+let LISTADO_ASC = false;
+let YEAR_TOTALES = '2026';
+let YEAR_UN = '2026';
+let MES_INTERANUAL = '01';
+let chartEv, chartOAFOA, chartTop, chartTimeline, chartInteranual;
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const fmt = (n,d=1) => n==null?'—':Number(n).toFixed(d);
+const nivelCls = n => n==='CRITICO'?'crit':(n==='ALERTA'?'alert':'norm');
+const nivelLbl = n => n==='CRITICO'?'Crítico':(n==='ALERTA'?'Alerta':'Normal');
+const cargKey = () => CRITERIO==='OA'?'carg_oa':'carg_foa';
+const nivelKey = () => CRITERIO==='OA'?'nivel_oa':'nivel_foa';
+const trafosP = (p) => DATA.trafos.filter(t=>t.periodo===(p||PERIODO));
+const totalesP = (p) => DATA.totales.find(t=>t.periodo===(p||PERIODO));
+const unidadesP = (p) => DATA.unidades.filter(u=>u.periodo===(p||PERIODO));
+const sufijo = () => CRITERIO==='OA'?'_oa':'_foa';
+const periodoAnterior = (p) => {
+  const i = DATA.periodos.indexOf(p||PERIODO);
+  return i>0 ? DATA.periodos[i-1] : null;
+};
+const anios = () => [...new Set(DATA.periodos.map(p=>p.split('-')[0]))].sort();
+const periodosPorAnio = (y) => DATA.periodos.filter(p=>p.startsWith(y));
+
+function deltaHTML(actual, ant, invertido=false) {
+  if (ant==null) return '';
+  const d = actual-ant;
+  if (d===0) return `<span class="kpi-delta flat">=</span>`;
+  const isUp = d>0;
+  const cls = invertido?(isUp?'down':'up'):(isUp?'up':'down');
+  return `<span class="kpi-delta ${cls}">${isUp?'+':''}${d}</span>`;
+}
+
+// ─── MONTH SELECTOR ───────────────────────────────────────────────────────────
+function renderMesBtns(containerId, periodoActivo, onSelect, extraClass='') {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  c.innerHTML = DATA.periodos.map(p =>
+    `<button class="mes-btn ${p===periodoActivo?'active':''} ${extraClass}" data-p="${p}">${DATA.periodos_label_corto[p]}</button>`
+  ).join('');
+  c.querySelectorAll('.mes-btn').forEach(b => b.addEventListener('click', () => {
+    c.querySelectorAll('.mes-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    onSelect(b.dataset.p);
+  }));
+}
+
+// ─── TAB NAVIGATION ──────────────────────────────────────────────────────────
+function initTabs() {
+  document.querySelectorAll('.nav-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c=>c.style.display='none');
+      btn.classList.add('active');
+      document.getElementById(`tab-${btn.dataset.tab}`).style.display='block';
+      if (btn.dataset.tab==='comparativo') renderComparativo();
+      if (btn.dataset.tab==='detalle') renderDetalle();
+    });
+  });
+
+  // Sub-tabs comparativo
+  document.querySelectorAll('[data-subtab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-subtab]').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('#tab-comparativo > div[id^=subtab]').forEach(d=>d.style.display='none');
+      document.getElementById(`subtab-${btn.dataset.subtab}`).style.display='block';
+      if (btn.dataset.subtab==='interanual') renderInteranual();
+    });
+  });
+
+  // Sub-tabs detalle
+  document.querySelectorAll('[data-subtab2]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-subtab2]').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('#tab-detalle > div[id^=subtab2]').forEach(d=>d.style.display='none');
+      document.getElementById(`subtab2-${btn.dataset.subtab2}`).style.display='block';
+    });
+  });
+}
+
+// ─── CRITERIO TABS ───────────────────────────────────────────────────────────
+function initCriterio() {
+  document.querySelectorAll('.criterio-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.criterio-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      CRITERIO = b.dataset.c;
+      renderEjecutivo();
+      renderComparativo();
+    });
+  });
+}
+
+// ─── TAB 1: EJECUTIVO ─────────────────────────────────────────────────────────
+function renderEjecutivo() {
+  renderMesBtns('mesBtns', PERIODO, (p) => { PERIODO=p; renderEjecutivo(); });
+  document.getElementById('periodoActualLabel').textContent = DATA.periodos_label[PERIODO];
+  document.getElementById('semPeriodoLabel').textContent = DATA.periodos_label[PERIODO];
+  document.getElementById('top10PeriodoLabel').textContent = DATA.periodos_label[PERIODO];
+  renderKPIs();
+  renderEvolucionChart();
+  renderSemaforo();
+  renderTop15();
+  renderOAFOAChart();
+}
+
+function renderKPIs() {
+  const t = totalesP();
+  const ant = totalesP(periodoAnterior());
+  const sf = sufijo();
+  const crit = t['critico'+sf], alert = t['alerta'+sf], norm = t['normal'+sf];
+  const dC = ant?deltaHTML(crit,ant['critico'+sf]):'';
+  const dA = ant?deltaHTML(alert,ant['alerta'+sf]):'';
+  const dN = ant?deltaHTML(norm,ant['normal'+sf],true):'';
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Total transformadores</div><div class="kpi-value">${t.n_trafos}</div><div class="kpi-sub">${t.n_subes} subestaciones · ${t.n_alim} alimentadores</div></div>
+    <div class="kpi"><div class="kpi-label">Capacidad ${CRITERIO}</div><div class="kpi-value">${CRITERIO==='OA'?t.mva_total_oa:t.mva_total_foa}<span class="kpi-unit">MVA</span></div><div class="kpi-sub">Demanda máx · ${t.dem_total} MW</div></div>
+    <div class="kpi crit"><div class="kpi-label">Críticos ≥90%${dC}</div><div class="kpi-value">${crit}</div><div class="kpi-sub">${(crit/t.n_trafos*100).toFixed(1)}% del total</div></div>
+    <div class="kpi alert"><div class="kpi-label">En alerta 70–90%${dA}</div><div class="kpi-value">${alert}</div><div class="kpi-sub">${(alert/t.n_trafos*100).toFixed(1)}% requiere proyección</div></div>
+    <div class="kpi norm"><div class="kpi-label">Normal &lt;70%${dN}</div><div class="kpi-value">${norm}</div><div class="kpi-sub">${(norm/t.n_trafos*100).toFixed(1)}% sin acción</div></div>
+  `;
+}
+
+function renderEvolucionChart() {
+  const ctx = document.getElementById('chartEvolucion').getContext('2d');
+  if (chartEv) chartEv.destroy();
+  const sf = sufijo();
+  const labels = DATA.periodos.map(p => DATA.periodos_label_corto[p]);
+  const critData = DATA.totales.map(t => t['critico'+sf]);
+  const alertData = DATA.totales.map(t => t['alerta'+sf]);
+  chartEv = new Chart(ctx, {
+    type:'line',
+    data:{ labels, datasets:[
+      {label:`Críticos ${CRITERIO}`, data:critData, borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.08)', fill:true, tension:0.3, borderWidth:2.5, pointRadius:4, pointHoverRadius:6},
+      {label:`Alerta ${CRITERIO}`, data:alertData, borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.06)', fill:true, tension:0.3, borderWidth:2, pointRadius:3, pointHoverRadius:5},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{family:'Manrope',size:11,weight:'600'}}},tooltip:{backgroundColor:'#0a0e1a',borderColor:'#2d3a52',borderWidth:1}},
+      scales:{x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#64748b',font:{family:'JetBrains Mono',size:9},maxRotation:45}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{family:'JetBrains Mono',size:10}}}}}
+  });
+}
+
+function renderSemaforo() {
+  const sf = sufijo();
+  const unidades = unidadesP();
+  document.getElementById('semaforoGrid').innerHTML = DATA.un_orden.map(un => {
+    const u = unidades.find(x=>x.un===un); if (!u) return '';
+    const c=u['critico'+sf], a=u['alerta'+sf], n=u['normal'+sf], total=u.n_trafos;
+    return `
+      <div class="semaforo-row ${c>0?'has-crit':''}" onclick="abrirModalUN('${un}')">
+        <span class="semaforo-un">${un}</span>
+        <span class="semaforo-nombre">${u.nombre}</span>
+        <div class="semaforo-chips">
+          <span class="chip crit ${c===0?'chip-zero':''}">${c}</span>
+          <span class="chip alert ${a===0?'chip-zero':''}">${a}</span>
+          <span class="chip norm">${n}</span>
+        </div>
+        <div class="semaforo-bar"><div class="semaforo-bar-fill">
+          <div class="bar-crit" style="width:${c/total*100}%"></div>
+          <div class="bar-alert" style="width:${a/total*100}%"></div>
+          <div class="bar-norm" style="width:${n/total*100}%"></div>
+        </div></div>
+      </div>`;
+  }).join('');
+}
+
+function renderTop15() {
+  const top = trafosP().slice().sort((a,b)=>(b[cargKey()]||0)-(a[cargKey()]||0)).slice(0,15);
+  document.getElementById('top15Body').innerHTML = top.map((t,i) => {
+    const carg = t[cargKey()];
+    const col = t[nivelKey()]==='CRITICO'?'#ef4444':(t[nivelKey()]==='ALERTA'?'#f59e0b':'#10b981');
+    return `<tr onclick='abrirModalTrafo("${t.un}",${JSON.stringify(t.subestacion)},"${t.trafo}")'>
+      <td class="rank">${i+1}</td>
+      <td><strong style="font-family:'JetBrains Mono',monospace;font-size:11px;">${t.un}</strong></td>
+      <td>${t.subestacion}</td>
+      <td class="num">${t.trafo}</td>
+      <td class="num">${CRITERIO==='OA'?t.mva_oa:t.mva_foa}</td>
+      <td class="num">${fmt(t.dem_max,2)}</td>
+      <td class="num">${carg==null?'—':carg+'%'}<span class="cbar"><span class="cbar-fill" style="width:${Math.min(carg||0,130)/130*100}%;background:${col};"></span></span></td>
+      <td><span class="badge ${nivelCls(t[nivelKey()])}">${nivelLbl(t[nivelKey()])}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderOAFOAChart() {
+  const ctx = document.getElementById('chartOAFOA').getContext('2d');
+  if (chartOAFOA) chartOAFOA.destroy();
+  const t = totalesP();
+  chartOAFOA = new Chart(ctx, {
+    type:'bar',
+    data:{labels:['Crítico (≥90%)','Alerta (70-90%)','Normal (<70%)'],datasets:[
+      {label:'OA',data:[t.critico_oa,t.alerta_oa,t.normal_oa],backgroundColor:'rgba(251,191,36,0.8)',borderRadius:6},
+      {label:'FOA',data:[t.critico_foa,t.alerta_foa,t.normal_foa],backgroundColor:'rgba(59,130,246,0.8)',borderRadius:6},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{family:'Manrope',size:11,weight:'600'}}},tooltip:{backgroundColor:'#0a0e1a',borderColor:'#2d3a52',borderWidth:1}},
+      scales:{x:{grid:{display:false},ticks:{color:'#94a3b8',font:{family:'Manrope',size:11}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{family:'JetBrains Mono',size:10}}}}}
+  });
+}
+
+// ─── TAB 2: COMPARATIVO ──────────────────────────────────────────────────────
+function renderComparativo() {
+  renderMatrizTotales();
+  renderMatrizUN();
+}
+
+function renderYearBtns(containerId, activeYear, onSelect) {
+  const c = document.getElementById(containerId); if (!c) return;
+  const ys = anios();
+  c.innerHTML = ys.map(y =>
+    `<button class="year-btn ${y===activeYear?'active':''}" data-y="${y}">${y}</button>`
+  ).join('');
+  c.querySelectorAll('[data-y]').forEach(b => b.addEventListener('click', () => {
+    c.querySelectorAll('[data-y]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    onSelect(b.dataset.y);
+  }));
+}
+
+function renderMatrizTotales() {
+  renderYearBtns('yearBtnsTotales', YEAR_TOTALES, (y) => { YEAR_TOTALES=y; renderMatrizTotales(); });
+  const periodos = periodosPorAnio(YEAR_TOTALES);
+  const MESES_CORTOS = {1:'ENE',2:'FEB',3:'MAR',4:'ABR',5:'MAY',6:'JUN',7:'JUL',8:'AGO',9:'SEP',10:'OCT',11:'NOV',12:'DIC'};
+  let head = '<th class="row-label">Nivel / Criterio</th>';
+  for (let m=1;m<=12;m++) {
+    const p = `${YEAR_TOTALES}-${String(m).padStart(2,'0')}`;
+    const existe = periodos.includes(p);
+    head += `<th style="${!existe?'opacity:0.3;':''}">${MESES_CORTOS[m]}</th>`;
+  }
+  document.getElementById('matrizTotalesHead').innerHTML = head;
+  const filas = [
+    {n:'CRITICO',c:'OA',label:'🔴 Crítico OA',cls:'crit'},
+    {n:'ALERTA',c:'OA',label:'🟠 Alerta OA',cls:'alert'},
+    {n:'NORMAL',c:'OA',label:'🟢 Normal OA',cls:'norm'},
+    {n:'CRITICO',c:'FOA',label:'🔴 Crítico FOA',cls:'crit'},
+    {n:'ALERTA',c:'FOA',label:'🟠 Alerta FOA',cls:'alert'},
+    {n:'NORMAL',c:'FOA',label:'🟢 Normal FOA',cls:'norm'},
+  ];
+  let body = '';
+  filas.forEach(f => {
+    const sf = f.c==='OA'?'_oa':'_foa';
+    const key = (f.n==='CRITICO'?'critico':(f.n==='ALERTA'?'alerta':'normal'))+sf;
+    body += `<tr><td class="row-label"><div class="row-label-inner"><span class="dot ${f.cls}"></span>${f.label}</div></td>`;
+    for (let m=1;m<=12;m++) {
+      const p = `${YEAR_TOTALES}-${String(m).padStart(2,'0')}`;
+      const t = DATA.totales.find(x=>x.periodo===p);
+      if (!t) { body += `<td><span class="mcell ph"><span class="mnum" style="color:var(--dim);font-size:16px;">—</span></span></td>`; continue; }
+      const valor = t[key];
+      const pi = DATA.periodos.indexOf(p);
+      let delta = '';
+      if (pi>0) {
+        const tAnt = DATA.totales.find(x=>x.periodo===DATA.periodos[pi-1]);
+        if (tAnt) {
+          const d = valor-tAnt[key];
+          const isNorm = f.n==='NORMAL';
+          const cls = d===0?'flat':(isNorm?(d>0?'down':'up'):(d>0?'up':'down'));
+          delta = `<span class="mdelta ${cls}">${d===0?'=':((d>0?'+':'')+d)}</span>`;
+        }
+      }
+      body += `<td><span class="mcell ${f.cls}" onclick="abrirModalListado('${f.n}','${f.c}','${p}','ALL')"><span class="mnum">${valor}</span>${delta}</span></td>`;
+    }
+    body += '</tr>';
+  });
+  document.getElementById('matrizTotalesBody').innerHTML = body;
+}
+
+function renderMatrizUN() {
+  renderYearBtns('yearBtnsUN', YEAR_UN, (y) => { YEAR_UN=y; renderMatrizUN(); });
+  const sf = sufijo();
+  const MESES_CORTOS = {1:'ENE',2:'FEB',3:'MAR',4:'ABR',5:'MAY',6:'JUN',7:'JUL',8:'AGO',9:'SEP',10:'OCT',11:'NOV',12:'DIC'};
+  let head = '<th class="row-label">UN</th>';
+  for (let m=1;m<=12;m++) {
+    const p = `${YEAR_UN}-${String(m).padStart(2,'0')}`;
+    const existe = DATA.periodos.includes(p);
+    head += `<th style="${!existe?'opacity:0.3;':''}">${MESES_CORTOS[m]}</th>`;
+  }
+  document.getElementById('matrizUNHead').innerHTML = head;
+  let body = '';
+  DATA.un_orden.forEach(un => {
+    body += `<tr><td class="row-label" style="font-family:'JetBrains Mono',monospace;font-size:11px;">${un} · ${DATA.un_nombres[un]}</td>`;
+    for (let m=1;m<=12;m++) {
+      const p = `${YEAR_UN}-${String(m).padStart(2,'0')}`;
+      const u = DATA.unidades.find(x=>x.periodo===p&&x.un===un);
+      if (!u) { body += `<td style="opacity:0.2;">—</td>`; continue; }
+      const c=u['critico'+sf], a=u['alerta'+sf], n=u['normal'+sf];
+      body += `<td><div class="un-mcells">
+        <span class="un-mcell crit ${c===0?'zero':''}" ${c>0?`onclick="abrirModalListado('CRITICO','${CRITERIO}','${p}','${un}')"`:''}><span class="mn">${c}</span><span class="ml">CRIT</span></span>
+        <span class="un-mcell alert ${a===0?'zero':''}" ${a>0?`onclick="abrirModalListado('ALERTA','${CRITERIO}','${p}','${un}')"`:''}><span class="mn">${a}</span><span class="ml">ALER</span></span>
+        <span class="un-mcell norm ${n===0?'zero':''}" ${n>0?`onclick="abrirModalListado('NORMAL','${CRITERIO}','${p}','${un}')"`:''}><span class="mn">${n}</span><span class="ml">NORM</span></span>
+      </div></td>`;
+    }
+    body += '</tr>';
+  });
+  document.getElementById('matrizUNBody').innerHTML = body;
+}
+
+function renderInteranual() {
+  // Botones de mes
+  const MESES = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const MESES_NOM = {1:'Enero',2:'Febrero',3:'Marzo',4:'Abril',5:'Mayo',6:'Junio',7:'Julio',8:'Agosto',9:'Septiembre',10:'Octubre',11:'Noviembre',12:'Diciembre'};
+  const c = document.getElementById('mesInteranualBtns');
+  c.innerHTML = MESES.map(m => {
+    const tieneData = anios().some(y => DATA.periodos.includes(`${y}-${m}`));
+    if (!tieneData) return '';
+    return `<button class="mes-btn ${m===MES_INTERANUAL?'active':''}" data-m="${m}">${MESES_NOM[parseInt(m)]}</button>`;
+  }).join('');
+  c.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => {
+    c.querySelectorAll('[data-m]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    MES_INTERANUAL = b.dataset.m;
+    dibujarInteranual();
+  }));
+  dibujarInteranual();
+}
+
+function dibujarInteranual() {
+  const ctx = document.getElementById('chartInteranual').getContext('2d');
+  if (chartInteranual) chartInteranual.destroy();
+  const sf = sufijo();
+  const ys = anios();
+  const labels = ys;
+  const critData = ys.map(y => {
+    const p = `${y}-${MES_INTERANUAL}`;
+    const t = DATA.totales.find(x=>x.periodo===p);
+    return t ? t['critico'+sf] : null;
+  });
+  const alertData = ys.map(y => {
+    const p = `${y}-${MES_INTERANUAL}`;
+    const t = DATA.totales.find(x=>x.periodo===p);
+    return t ? t['alerta'+sf] : null;
+  });
+  chartInteranual = new Chart(ctx, {
+    type:'bar',
+    data:{labels, datasets:[
+      {label:`Críticos ${CRITERIO}`, data:critData, backgroundColor:'#ef4444', borderRadius:8},
+      {label:`Alerta ${CRITERIO}`, data:alertData, backgroundColor:'#f59e0b', borderRadius:8},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{family:'Manrope',size:11,weight:'600'}}},tooltip:{backgroundColor:'#0a0e1a',borderColor:'#2d3a52',borderWidth:1}},
+      scales:{x:{grid:{display:false},ticks:{color:'#94a3b8',font:{family:'Manrope',size:13,weight:'600'}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{family:'JetBrains Mono',size:10}}}}}
+  });
+}
+
+// ─── TAB 3: DETALLE ──────────────────────────────────────────────────────────
+function renderDetalle() {
+  renderTopUN();
+  renderTimelineSelect();
+  renderListadoFiltros();
+  llenarListadoUN();
+}
+
+function renderTopUN() {
+  renderMesBtns('topUNMesBtns', TOP_UN_PERIODO, (p) => { TOP_UN_PERIODO=p; renderTopUN(); });
+  document.getElementById('topUNGrid').innerHTML = DATA.un_orden.map(un => {
+    const trafosUN = DATA.trafos.filter(t=>t.periodo===TOP_UN_PERIODO&&t.un===un);
+    const top = trafosUN.slice().sort((a,b)=>(b[cargKey()]||0)-(a[cargKey()]||0)).slice(0,TOP_UN_COUNT);
+    return `
+      <div class="topun-card">
+        <div class="topun-head">
+          <div><div class="topun-name">${DATA.un_nombres[un]}</div><div class="topun-code">${un} · ${trafosUN.length} trafos</div></div>
+        </div>
+        <div class="topun-list">
+          ${top.length===0?'<div style="text-align:center;color:var(--muted);padding:16px;font-size:11px;">Sin datos</div>':
+            top.map(t=>`
+              <div class="topun-item" onclick='abrirModalTrafo("${t.un}",${JSON.stringify(t.subestacion)},"${t.trafo}")'>
+                <div class="topun-item-info">
+                  <div class="topun-item-titulo">${t.subestacion} · ${t.trafo}</div>
+                  <div class="topun-item-mva">${CRITERIO==='OA'?t.mva_oa:t.mva_foa} MVA · ${t.dem_max} MW</div>
+                </div>
+                <span class="topun-carg ${nivelCls(t[nivelKey()])}">${t[cargKey()]}%</span>
+              </div>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderTimelineSelect() {
+  const unicos = new Map();
+  DATA.trafos.forEach(t => { const k=`${t.un}|${t.subestacion}|${t.trafo}`; if(!unicos.has(k)) unicos.set(k,t); });
+  const lista = Array.from(unicos.values()).sort((a,b)=>a.un.localeCompare(b.un)||a.subestacion.localeCompare(b.subestacion)||a.trafo.localeCompare(b.trafo));
+  const sel = document.getElementById('timelineSelect');
+  const q = (document.getElementById('timelineSearch').value||'').toLowerCase();
+  const filtrado = q ? lista.filter(t=>`${t.un} ${t.subestacion} ${t.trafo}`.toLowerCase().includes(q)) : lista;
+  sel.innerHTML = '<option value="">— Selecciona un transformador —</option>' +
+    filtrado.map(t=>`<option value="${t.un}|${t.subestacion}|${t.trafo}">${t.un} · ${t.subestacion} · ${t.trafo}</option>`).join('');
+}
+
+function renderTimelineChart(key) {
+  const cont = document.getElementById('timelineContent');
+  if (!key) { cont.innerHTML=`<div class="timeline-empty"><div style="font-size:32px;margin-bottom:10px;opacity:0.4;">📈</div><div>Selecciona un transformador para ver su evolución</div></div>`; return; }
+  const [un,sub,trafo] = key.split('|');
+  const regs = DATA.trafos.filter(t=>t.un===un&&t.subestacion===sub&&t.trafo===trafo).sort((a,b)=>a.periodo.localeCompare(b.periodo));
+  if (!regs.length) return;
+  const ult = regs[regs.length-1];
+  cont.innerHTML = `
+    <div class="modal-grid" style="margin-top:16px;">
+      <div class="modal-stat"><div class="modal-stat-lbl">Capacidad</div><div class="modal-stat-val">${ult.mva_oa||'—'} <span style="font-size:14px;color:var(--muted);">/ ${ult.mva_foa||'—'}</span></div><div class="modal-stat-sub">MVA OA / MVA FOA</div></div>
+      <div class="modal-stat"><div class="modal-stat-lbl">Última demanda máx</div><div class="modal-stat-val">${ult.dem_max||'—'} MW</div><div class="modal-stat-sub">FP: ${ult.fp||'—'}</div></div>
+      <div class="modal-stat"><div class="modal-stat-lbl">Cargabilidad OA</div><div class="modal-stat-val" style="color:${nivelCls(ult.nivel_oa)==='crit'?'var(--crit)':(nivelCls(ult.nivel_oa)==='alert'?'var(--alert)':'var(--norm)')};">${ult.carg_oa||'—'}%</div><div class="modal-stat-sub"><span class="badge ${nivelCls(ult.nivel_oa)}">${nivelLbl(ult.nivel_oa)}</span></div></div>
+      <div class="modal-stat"><div class="modal-stat-lbl">Cargabilidad FOA</div><div class="modal-stat-val" style="color:${nivelCls(ult.nivel_foa)==='crit'?'var(--crit)':(nivelCls(ult.nivel_foa)==='alert'?'var(--alert)':'var(--norm)')};">${ult.carg_foa||'—'}%</div><div class="modal-stat-sub"><span class="badge ${nivelCls(ult.nivel_foa)}">${nivelLbl(ult.nivel_foa)}</span></div></div>
+    </div>
+    <div class="chart-wrap h320" style="margin-top:14px;"><canvas id="chartTimelineInner"></canvas></div>
+    <div style="margin-top:12px;padding:12px 16px;background:var(--bg-2);border-radius:9px;border:1px solid var(--border);font-size:12px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:0.12em;margin-bottom:5px;text-transform:uppercase;">Alimentadores (${ult.n_alim})</div>
+      <div>${(ult.alimentadores||'').split(' · ').map(a=>`<span style="display:inline-block;margin-right:6px;padding:2px 8px;background:var(--bg-card);border-radius:5px;margin-bottom:3px;">${a}</span>`).join('')}</div>
+    </div>
+  `;
+  setTimeout(() => {
+    const ctx2 = document.getElementById('chartTimelineInner').getContext('2d');
+    if (chartTimeline) chartTimeline.destroy();
+    const labels = regs.map(r=>DATA.periodos_label_corto[r.periodo]);
+    chartTimeline = new Chart(ctx2, {type:'line',data:{labels,datasets:[
+      {label:'% OA',data:regs.map(r=>r.carg_oa),borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,0.08)',tension:0.3,fill:true,borderWidth:2.5,pointRadius:5,pointHoverRadius:7},
+      {label:'% FOA',data:regs.map(r=>r.carg_foa),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.08)',tension:0.3,fill:true,borderWidth:2.5,pointRadius:5,pointHoverRadius:7},
+      {label:'Crítico (90%)',data:regs.map(()=>90),borderColor:'#ef4444',borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false},
+      {label:'Alerta (70%)',data:regs.map(()=>70),borderColor:'#f59e0b',borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false},
+    ]},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{family:'Manrope',size:11,weight:'600'}}},tooltip:{backgroundColor:'#0a0e1a',borderColor:'#2d3a52',borderWidth:1}},
+      scales:{x:{grid:{display:false},ticks:{color:'#94a3b8',font:{family:'Manrope',size:11},maxRotation:45}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{family:'JetBrains Mono',size:10},callback:v=>v+'%'}}}}});
+  },50);
+}
+
+function llenarListadoUN() {
+  const sel = document.getElementById('listadoUN');
+  sel.innerHTML = '<option value="ALL">Todas las UN</option>' +
+    DATA.un_orden.map(u=>`<option value="${u}">${u} · ${DATA.un_nombres[u]}</option>`).join('');
+}
+
+function renderListadoFiltros() {
+  renderMesBtns('listadoMesBtns', LISTADO_PERIODO, (p) => { LISTADO_PERIODO=p; renderListado(); });
+  renderListado();
+  document.querySelectorAll('#listadoPills .pill').forEach(p => {
+    p.addEventListener('click', () => {
+      document.querySelectorAll('#listadoPills .pill').forEach(x=>x.className='pill');
+      LISTADO_NIV = p.dataset.niv;
+      p.className = `pill active-${LISTADO_NIV.toLowerCase()}`;
+      if (LISTADO_NIV==='ALL') p.className='pill active-all';
+      renderListado();
+    });
+  });
+  document.getElementById('listadoUN').addEventListener('change', e=>{LISTADO_UN=e.target.value; renderListado();});
+  document.getElementById('listadoSearch').addEventListener('input', e=>{LISTADO_TXT=e.target.value; renderListado();});
+  document.getElementById('btnExportListado').addEventListener('click', exportListado);
+  document.querySelectorAll('table.main th').forEach(th=>{
+    th.addEventListener('click',()=>{
+      if(LISTADO_SORT===th.dataset.col) LISTADO_ASC=!LISTADO_ASC;
+      else {LISTADO_SORT=th.dataset.col; LISTADO_ASC=false;}
+      renderListado();
+    });
+  });
+}
+
+function getListadoFiltrado() {
+  let arr = trafosP(LISTADO_PERIODO);
+  if (LISTADO_NIV!=='ALL') arr=arr.filter(t=>t[nivelKey()]===LISTADO_NIV);
+  if (LISTADO_UN!=='ALL') arr=arr.filter(t=>t.un===LISTADO_UN);
+  if (LISTADO_TXT) { const q=LISTADO_TXT.toLowerCase(); arr=arr.filter(t=>(t.subestacion||'').toLowerCase().includes(q)||(t.trafo||'').toLowerCase().includes(q)||(t.un||'').toLowerCase().includes(q)); }
+  arr=arr.slice().sort((a,b)=>{
+    const av=a[LISTADO_SORT],bv=b[LISTADO_SORT];
+    if(av==null) return 1; if(bv==null) return -1;
+    if(typeof av==='number') return LISTADO_ASC?av-bv:bv-av;
+    return LISTADO_ASC?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av));
+  });
+  return arr;
+}
+
+function renderListado() {
+  const arr = getListadoFiltrado();
+  const col = (v,n) => n==='CRITICO'?'#ef4444':(n==='ALERTA'?'#f59e0b':'#10b981');
+  document.getElementById('listadoBody').innerHTML = arr.map(t=>`
+    <tr onclick='abrirModalTrafo("${t.un}",${JSON.stringify(t.subestacion)},"${t.trafo}")'>
+      <td><strong style="font-family:'JetBrains Mono',monospace;font-size:11px;">${t.un}</strong></td>
+      <td>${t.subestacion}</td>
+      <td class="num">${t.trafo}</td>
+      <td class="num">${t.mva_oa||'—'}</td>
+      <td class="num">${t.mva_foa||'—'}</td>
+      <td class="num">${fmt(t.dem_max,2)}</td>
+      <td class="num">${fmt(t.fp,3)}</td>
+      <td class="num">${t.carg_oa==null?'—':t.carg_oa+'%'}<span class="cbar"><span class="cbar-fill" style="width:${Math.min(t.carg_oa||0,130)/130*100}%;background:${col(t.carg_oa,t.nivel_oa)};"></span></span></td>
+      <td class="num">${t.carg_foa==null?'—':t.carg_foa+'%'}<span class="cbar"><span class="cbar-fill" style="width:${Math.min(t.carg_foa||0,130)/130*100}%;background:${col(t.carg_foa,t.nivel_foa)};"></span></span></td>
+      <td><span class="badge ${nivelCls(t.nivel_oa)}">${nivelLbl(t.nivel_oa)}</span></td>
+      <td><span class="badge ${nivelCls(t.nivel_foa)}">${nivelLbl(t.nivel_foa)}</span></td>
+    </tr>`).join('');
+  document.getElementById('listadoCount').textContent = `Mostrando ${arr.length} de ${trafosP(LISTADO_PERIODO).length} transformadores`;
+}
+
+function exportListado() {
+  const arr = getListadoFiltrado();
+  const h = ['Periodo','UN','Subestacion','Trafo','MVA_OA','MVA_FOA','Dem_Max_MW','FP','Carg_OA_%','Carg_FOA_%','Nivel_OA','Nivel_FOA','N_Alim','Alimentadores'];
+  const rows = arr.map(t=>[LISTADO_PERIODO,t.un,t.subestacion,t.trafo,t.mva_oa,t.mva_foa,t.dem_max,t.fp,t.carg_oa,t.carg_foa,t.nivel_oa,t.nivel_foa,t.n_alim,`"${(t.alimentadores||'').replace(/"/g,'""')}"`].join(','));
+  const csv = '\ufeff'+[h.join(','),...rows].join('\n');
+  const a = document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`cargabilidad_${LISTADO_PERIODO}.csv`; a.click();
+}
+
+// ─── MODALES ─────────────────────────────────────────────────────────────────
+function abrirModalListado(nivel, criterio, periodo, un) {
+  const nk = criterio==='OA'?'nivel_oa':'nivel_foa';
+  const ck = criterio==='OA'?'carg_oa':'carg_foa';
+  let arr = DATA.trafos.filter(t=>t.periodo===periodo&&t[nk]===nivel);
+  if (un&&un!=='ALL') arr=arr.filter(t=>t.un===un);
+  arr.sort((a,b)=>(b[ck]||0)-(a[ck]||0));
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-header">
+      <div><div class="modal-title">${arr.length} transformadores ${nivelLbl(nivel).toLowerCase()}s</div>
+      <div class="modal-sub">${nivelLbl(nivel)} ${criterio} · ${DATA.periodos_label[periodo]}${un&&un!=='ALL'?' · '+un:''}</div></div>
+      <button class="close-btn" onclick="cerrarModal()">×</button>
+    </div>
+    <div class="modal-table-wrap">
+      <table class="top-table">
+        <thead><tr><th>UN</th><th>Subestación</th><th>Trafo</th><th>MVA OA</th><th>MVA FOA</th><th>D.Máx</th><th>%OA</th><th>%FOA</th><th>Niv. OA</th><th>Niv. FOA</th></tr></thead>
+        <tbody>${arr.map(t=>`<tr style="cursor:pointer;" onclick='cerrarModal();abrirModalTrafo("${t.un}",${JSON.stringify(t.subestacion)},"${t.trafo}")'>
+          <td><strong style="font-family:'JetBrains Mono',monospace;font-size:11px;">${t.un}</strong></td>
+          <td>${t.subestacion}</td><td class="num">${t.trafo}</td>
+          <td class="num">${t.mva_oa||'—'}</td><td class="num">${t.mva_foa||'—'}</td>
+          <td class="num">${fmt(t.dem_max,2)}</td>
+          <td class="num">${t.carg_oa==null?'—':t.carg_oa+'%'}</td>
+          <td class="num">${t.carg_foa==null?'—':t.carg_foa+'%'}</td>
+          <td><span class="badge ${nivelCls(t.nivel_oa)}">${nivelLbl(t.nivel_oa)}</span></td>
+          <td><span class="badge ${nivelCls(t.nivel_foa)}">${nivelLbl(t.nivel_foa)}</span></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;display:flex;justify-content:flex-end;">
+      <button onclick="exportArrCSV(${JSON.stringify(arr.map(t=>({...t})))},'listado_${nivel}_${criterio}_${periodo}')" style="padding:8px 16px;background:var(--accent);color:#0a0e1a;border:none;border-radius:7px;cursor:pointer;font-weight:700;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;">↓ Exportar CSV</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function abrirModalUN(un) {
+  const u = unidadesP().find(x=>x.un===un);
+  const sf = sufijo();
+  const top = trafosP().filter(t=>t.un===un).sort((a,b)=>(b[cargKey()]||0)-(a[cargKey()]||0)).slice(0,10);
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-header">
+      <div><div class="modal-title">${u.nombre}</div><div class="modal-sub">${u.un} · CRITERIO ${CRITERIO} · ${DATA.periodos_label[PERIODO]}</div></div>
+      <button class="close-btn" onclick="cerrarModal()">×</button>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-stat"><div class="modal-stat-lbl">Subestaciones</div><div class="modal-stat-val">${u.n_subes}</div><div class="modal-stat-sub">${u.n_alim} alimentadores</div></div>
+      <div class="modal-stat"><div class="modal-stat-lbl">Transformadores</div><div class="modal-stat-val">${u.n_trafos}</div><div class="modal-stat-sub">${CRITERIO==='OA'?u.mva_total_oa:u.mva_total_foa} MVA ${CRITERIO}</div></div>
+      <div class="modal-stat"><div class="modal-stat-lbl">Demanda Máx</div><div class="modal-stat-val">${u.dem_total} MW</div><div class="modal-stat-sub">Cargabilidad prom. ${CRITERIO==='OA'?u.carg_prom_oa:u.carg_prom_foa}%</div></div>
+      <div class="modal-stat"><div class="modal-stat-lbl">Estado</div><div class="modal-stat-val"><span style="color:var(--crit)">${u['critico'+sf]}</span> · <span style="color:var(--alert)">${u['alerta'+sf]}</span> · <span style="color:var(--norm)">${u['normal'+sf]}</span></div><div class="modal-stat-sub">Críticos · Alerta · Normal</div></div>
+    </div>
+    <div style="margin-bottom:8px;font-weight:600;font-size:13px;">Top 10 transformadores · ${CRITERIO}</div>
+    <div class="modal-table-wrap">
+      <table class="top-table">
+        <thead><tr><th>Subestación</th><th>Trafo</th><th>MVA</th><th>D.Máx</th><th>Cargabilidad</th><th>Nivel</th></tr></thead>
+        <tbody>${top.map(t=>`<tr style="cursor:pointer;" onclick='cerrarModal();abrirModalTrafo("${t.un}",${JSON.stringify(t.subestacion)},"${t.trafo}")'>
+          <td>${t.subestacion}</td><td class="num">${t.trafo}</td>
+          <td class="num">${CRITERIO==='OA'?t.mva_oa:t.mva_foa}</td>
+          <td class="num">${t.dem_max}</td>
+          <td class="num">${t[cargKey()]}%</td>
+          <td><span class="badge ${nivelCls(t[nivelKey()])}">${nivelLbl(t[nivelKey()])}</span></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function abrirModalTrafo(un, sub, trafo) {
+  const regs = DATA.trafos.filter(x=>x.un===un&&x.subestacion===sub&&x.trafo===trafo).sort((a,b)=>a.periodo.localeCompare(b.periodo));
+  if (!regs.length) return;
+  const t = regs.find(r=>r.periodo===PERIODO)||regs[regs.length-1];
+
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-header">
+      <div><div class="modal-title">${t.subestacion} · ${t.trafo}</div><div class="modal-sub">${t.un} · ${DATA.periodos_label[t.periodo]}</div></div>
+      <button class="close-btn" onclick="cerrarModal()">×</button>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-stat"><div class="modal-stat-lbl">Capacidad nominal</div><div class="modal-stat-val">${t.mva_oa||'—'} <span style="font-size:14px;color:var(--muted);">/ ${t.mva_foa||'—'}</span></div><div class="modal-stat-sub">MVA OA / MVA FOA</div></div>
+      <div class="modal-stat"><div class="modal-stat-lbl">Demanda máxima</div><div class="modal-stat-val">${t.dem_max||'—'} MW</div><div class="modal-stat-sub">FP: ${t.fp||'—'}</div></div>
+      <div class="modal-stat"><div class="modal-stat-lbl">Cargabilidad OA actual</div><div class="modal-stat-val" style="color:${nivelCls(t.nivel_oa)==='crit'?'var(--crit)':(nivelCls(t.nivel_oa)==='alert'?'var(--alert)':'var(--norm)')};">${t.carg_oa||'—'}%</div><div class="modal-stat-sub"><span class="badge ${nivelCls(t.nivel_oa)}">${nivelLbl(t.nivel_oa)}</span></div></div>
+      <div class="modal-stat"><div class="modal-stat-lbl">Cargabilidad FOA actual</div><div class="modal-stat-val" style="color:${nivelCls(t.nivel_foa)==='crit'?'var(--crit)':(nivelCls(t.nivel_foa)==='alert'?'var(--alert)':'var(--norm)')};">${t.carg_foa||'—'}%</div><div class="modal-stat-sub"><span class="badge ${nivelCls(t.nivel_foa)}">${nivelLbl(t.nivel_foa)}</span></div></div>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);margin-bottom:10px;">Evolución mensual · Tendencia de cargabilidad</div>
+    <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px;">
+      <div style="position:relative;height:260px;"><canvas id="chartModalTrafo"></canvas></div>
+    </div>
+    <div style="margin-bottom:7px;font-weight:600;font-size:13px;">Alimentadores asociados (${t.n_alim})</div>
+    <div style="background:var(--bg-2);padding:12px 16px;border-radius:9px;border:1px solid var(--border);font-size:12.5px;line-height:1.7;">
+      ${(t.alimentadores||'').split(' · ').map(a=>`<span style="display:inline-block;margin-right:8px;padding:3px 10px;background:var(--bg-card);border-radius:6px;margin-bottom:4px;">${a}</span>`).join('')}
+    </div>`;
+
+  document.getElementById('modalOverlay').classList.add('show');
+
+  // Renderizar gráfico después de que el DOM esté listo
+  setTimeout(() => {
+    const ctx = document.getElementById('chartModalTrafo');
+    if (!ctx) return;
+    if (chartTimeline) chartTimeline.destroy();
+    const labels = regs.map(r => DATA.periodos_label_corto[r.periodo]);
+    const oaData = regs.map(r => r.carg_oa);
+    const foaData = regs.map(r => r.carg_foa);
+    const n = regs.length;
+
+    // Colores de puntos según nivel
+    const ptColorOA = regs.map(r => r.nivel_oa==='CRITICO'?'#ef4444':(r.nivel_oa==='ALERTA'?'#f59e0b':'#10b981'));
+    const ptColorFOA = regs.map(r => r.nivel_foa==='CRITICO'?'#ef4444':(r.nivel_foa==='ALERTA'?'#f59e0b':'#10b981'));
+
+    chartTimeline = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets: [
+        {
+          label: '% OA',
+          data: oaData,
+          borderColor: '#fbbf24',
+          backgroundColor: 'rgba(251,191,36,0.07)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          pointBackgroundColor: ptColorOA,
+          pointBorderColor: '#fbbf24',
+          pointBorderWidth: 1.5,
+        },
+        {
+          label: '% FOA',
+          data: foaData,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.07)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          pointBackgroundColor: ptColorFOA,
+          pointBorderColor: '#3b82f6',
+          pointBorderWidth: 1.5,
+        },
+        {
+          label: 'Crítico (90%)',
+          data: Array(n).fill(90),
+          borderColor: '#ef4444',
+          borderDash: [6, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+        },
+        {
+          label: 'Alerta (70%)',
+          data: Array(n).fill(70),
+          borderColor: '#f59e0b',
+          borderDash: [6, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+        },
+      ]},
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { labels: { color: '#94a3b8', font: { family: 'Manrope', size: 11, weight: '600' }, boxWidth: 20 } },
+          tooltip: {
+            backgroundColor: '#0a0e1a',
+            borderColor: '#2d3a52',
+            borderWidth: 1,
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y != null ? ctx.parsed.y + '%' : '—'}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255,255,255,0.03)' },
+            ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 45 }
+          },
+          y: {
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v + '%' },
+            suggestedMin: 0,
+            suggestedMax: Math.max(100, ...oaData.filter(Boolean), ...foaData.filter(Boolean)) + 10,
+          }
+        }
+      }
+    });
+  }, 80);
+}
+
+function cerrarModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+document.getElementById('modalOverlay').addEventListener('click', e=>{ if(e.target.id==='modalOverlay') cerrarModal(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') cerrarModal(); });
+
+function exportArrCSV(arr, filename) {
+  const h=['Periodo','UN','Subestacion','Trafo','MVA_OA','MVA_FOA','Dem_Max_MW','FP','Carg_OA_%','Carg_FOA_%','Nivel_OA','Nivel_FOA','N_Alim','Alimentadores'];
+  const rows=arr.map(t=>[t.periodo,t.un,t.subestacion,t.trafo,t.mva_oa,t.mva_foa,t.dem_max,t.fp,t.carg_oa,t.carg_foa,t.nivel_oa,t.nivel_foa,t.n_alim,`"${(t.alimentadores||'').replace(/"/g,'""')}"`].join(','));
+  const csv='\ufeff'+[h.join(','),...rows].join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`${filename}.csv`; a.click();
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+function init() {
+  initTabs();
+  initCriterio();
+  document.getElementById('timelineSearch').addEventListener('input', renderTimelineSelect);
+  document.getElementById('timelineSelect').addEventListener('change', e=>renderTimelineChart(e.target.value));
+  document.getElementById('topUNCount').addEventListener('change', e=>{TOP_UN_COUNT=parseInt(e.target.value);renderTopUN();});
+  document.getElementById('footerInfo').textContent = `${DATA.trafos.filter(t=>t.periodo===PERIODO).length} trafos · ${DATA.periodos_label[PERIODO]}`;
+  renderEjecutivo();
+}
+
+init();
+</script>
+</body>
+</html>
