@@ -425,6 +425,7 @@ footer{padding:20px 32px;border-top:1px solid var(--border);display:flex;justify
       <button class="year-btn active" data-subtab2="topun">Top por UN</button>
       <button class="year-btn" data-subtab2="trafo">Línea de tiempo por trafo</button>
       <button class="year-btn" data-subtab2="listado">Listado completo</button>
+      <button class="year-btn" data-subtab2="alimentadoras">⚡ Listado de alimentadoras</button>
       <button class="year-btn" data-subtab2="normas">Marco normativo</button>
     </div>
 
@@ -482,7 +483,7 @@ footer{padding:20px 32px;border-top:1px solid var(--border);display:flex;justify
         <span class="filter-label">UN</span>
         <select id="listadoUN"><option value="ALL">Todas</option></select>
         <input type="text" id="listadoSearch" placeholder="Buscar..." style="width:200px;">
-        <button class="btn-export" id="btnExportListado">↓ Exportar CSV</button>
+        <button class="btn-export" id="btnExportListado">↓ Exportar Excel</button>
       </div>
       <div class="table-wrap" style="max-height:520px;overflow-y:auto;">
         <table class="main">
@@ -505,6 +506,22 @@ footer{padding:20px 32px;border-top:1px solid var(--border);display:flex;justify
         </table>
       </div>
       <div style="padding:8px 14px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);background:var(--bg-card);border-radius:0 0 12px 12px;" id="listadoCount"></div>
+    </div>
+
+    <!-- Sub-tab: Listado de alimentadoras -->
+    <div id="subtab2-alimentadoras" style="display:none;">
+      <div class="filters" style="margin-bottom:14px;">
+        <span class="filter-label">UN</span>
+        <select id="alimUN"><option value="ALL">Todas</option></select>
+        <span class="filter-label">Mes</span>
+        <select id="alimMes"><option value="ALL">Todos los meses</option></select>
+        <input type="text" id="alimSearch" placeholder="Buscar subestación o alimentadora..." style="min-width:240px;">
+        <button class="btn-export" id="btnExportAlim">↓ Exportar Excel</button>
+      </div>
+      <div class="table-wrap" style="max-height:560px;overflow-y:auto;" id="alimTableWrap">
+        <div style="padding:40px;text-align:center;color:var(--muted);">Selecciona filtros para cargar el listado.</div>
+      </div>
+      <div style="padding:8px 14px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);background:var(--bg-card);border-radius:0 0 12px 12px;" id="alimCount"></div>
     </div>
 
     <!-- Sub-tab: Normas -->
@@ -667,6 +684,7 @@ function initTabs() {
       btn.classList.add('active');
       document.querySelectorAll('#tab-detalle > div[id^=subtab2]').forEach(d=>d.style.display='none');
       document.getElementById(`subtab2-${btn.dataset.subtab2}`).style.display='block';
+      if (btn.dataset.subtab2 === 'alimentadoras') initAlimSubtab();
     });
   });
 }
@@ -1078,12 +1096,7 @@ function renderListado() {
 }
 
 function exportListado() {
-  const arr = getListadoFiltrado();
-  const h = ['Periodo','UN','Subestacion','Trafo','MVA_OA','MVA_FOA','Dem_Max_MW','FP','Carg_OA_%','Carg_FOA_%','Nivel_OA','Nivel_FOA','N_Alim','Alimentadores'];
-  const rows = arr.map(t=>[LISTADO_PERIODO,t.un,t.subestacion,t.trafo,t.mva_oa,t.mva_foa,t.dem_max,t.fp,t.carg_oa,t.carg_foa,t.nivel_oa,t.nivel_foa,t.n_alim,`"${(t.alimentadores||'').replace(/"/g,'""')}"`].join(','));
-  const csv = '\ufeff'+[h.join(','),...rows].join('\n');
-  const a = document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  a.download=`cargabilidad_${LISTADO_PERIODO}.csv`; a.click();
+  exportarExcel(getListadoFiltrado(), `cargabilidad_${LISTADO_PERIODO}`);
 }
 
 // ─── MODALES ─────────────────────────────────────────────────────────────────
@@ -1115,7 +1128,7 @@ function abrirModalListado(nivel, criterio, periodo, un) {
       </table>
     </div>
     <div style="margin-top:12px;display:flex;justify-content:flex-end;">
-      <button onclick="exportArrCSV(${JSON.stringify(arr.map(t=>({...t})))},'listado_${nivel}_${criterio}_${periodo}')" style="padding:8px 16px;background:var(--accent);color:#0a0e1a;border:none;border-radius:7px;cursor:pointer;font-weight:700;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;">↓ Exportar CSV</button>
+      <button onclick="exportArrCSV(${JSON.stringify(arr.map(t=>({...t})))},'listado_${nivel}_${criterio}_${periodo}')" style="padding:8px 16px;background:var(--accent);color:#0a0e1a;border:none;border-radius:7px;cursor:pointer;font-weight:700;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;">↓ Exportar Excel</button>
     </div>`;
   document.getElementById('modalOverlay').classList.add('show');
 }
@@ -1278,12 +1291,180 @@ function cerrarModal() { document.getElementById('modalOverlay').classList.remov
 document.getElementById('modalOverlay').addEventListener('click', e=>{ if(e.target.id==='modalOverlay') cerrarModal(); });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') cerrarModal(); });
 
-function exportArrCSV(arr, filename) {
-  const h=['Periodo','UN','Subestacion','Trafo','MVA_OA','MVA_FOA','Dem_Max_MW','FP','Carg_OA_%','Carg_FOA_%','Nivel_OA','Nivel_FOA','N_Alim','Alimentadores'];
-  const rows=arr.map(t=>[t.periodo,t.un,t.subestacion,t.trafo,t.mva_oa,t.mva_foa,t.dem_max,t.fp,t.carg_oa,t.carg_foa,t.nivel_oa,t.nivel_foa,t.n_alim,`"${(t.alimentadores||'').replace(/"/g,'""')}"`].join(','));
-  const csv='\ufeff'+[h.join(','),...rows].join('\n');
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  a.download=`${filename}.csv`; a.click();
+function exportArrCSV(arr, filename) { exportarExcel(arr, filename); }
+
+// ── EXPORTAR TRANSFORMADORES A EXCEL ────────────────────────────────────────
+function exportarExcel(arr, filename) {
+  if (typeof XLSX === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = () => _generarExcel(arr, filename);
+    document.head.appendChild(s);
+  } else { _generarExcel(arr, filename); }
+}
+function _generarExcel(arr, filename) {
+  const h = ['Período','UN','Nombre UN','Subestación','Transformador','MVA OA','MVA FOA',
+              'Dem. Máx. MW','Factor Potencia','Carg. OA %','Carg. FOA %',
+              'Nivel OA','Nivel FOA','N° Alimentadores','Alimentadores'];
+  const filas = arr.map(t => [
+    DATA.periodos_label[t.periodo]||t.periodo, t.un, DATA.un_nombres[t.un]||t.un,
+    t.subestacion, t.trafo, t.mva_oa, t.mva_foa, t.dem_max, t.fp,
+    t.carg_oa, t.carg_foa, t.nivel_oa, t.nivel_foa, t.n_alim,
+    (t.alimentadores||'').replace(/\s·\s/g,' | ')
+  ]);
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([h, ...filas]);
+  ws['!cols'] = [{wch:16},{wch:5},{wch:18},{wch:26},{wch:10},{wch:8},{wch:8},
+                 {wch:14},{wch:12},{wch:10},{wch:10},{wch:10},{wch:10},{wch:6},{wch:55}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Cargabilidad Trafos');
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+}
+
+// ── EXPORTAR ALIMENTADORAS A EXCEL ───────────────────────────────────────────
+function exportarExcelAlim(arr, filename, periodos) {
+  if (typeof XLSX === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = () => _generarExcelAlim(arr, filename, periodos);
+    document.head.appendChild(s);
+  } else { _generarExcelAlim(arr, filename, periodos); }
+}
+function _generarExcelAlim(arr, filename, periodos) {
+  const h = ['UN','Nombre UN','Subestación','Transformador','Alimentadora',
+              ...periodos.map(p => DATA.periodos_label[p]||p)];
+  const mapa = new Map();
+  arr.forEach(r => {
+    const key = `${r.un}||${r.subestacion}||${r.trafo}||${r.alimentador}`;
+    if (!mapa.has(key)) mapa.set(key, {un:r.un, sub:r.subestacion, trafo:r.trafo, alim:r.alimentador, dems:{}});
+    mapa.get(key).dems[r.periodo] = r.dem_max;
+  });
+  const filas = Array.from(mapa.values())
+    .sort((a,b) => a.un.localeCompare(b.un)||a.sub.localeCompare(b.sub)||a.trafo.localeCompare(b.trafo)||a.alim.localeCompare(b.alim))
+    .map(r => [r.un, DATA.un_nombres[r.un]||r.un, r.sub, r.trafo, r.alim,
+               ...periodos.map(p => r.dems[p]!=null ? r.dems[p] : '')]);
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([h, ...filas]);
+  ws['!cols'] = [{wch:5},{wch:18},{wch:26},{wch:10},{wch:36},...periodos.map(()=>({wch:14}))];
+  XLSX.utils.book_append_sheet(wb, ws, 'Dem. Alimentadoras');
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+}
+
+// ── LÓGICA SUBTAB ALIMENTADORAS ──────────────────────────────────────────────
+let ALIM_UN = 'ALL', ALIM_MES = 'ALL', ALIM_TXT = '';
+
+function initAlimSubtab() {
+  // Poblar select UN
+  const selUN = document.getElementById('alimUN');
+  if (selUN.options.length <= 1) {
+    DATA.un_orden.forEach(u => {
+      const o = document.createElement('option');
+      o.value = u; o.textContent = `${u} · ${DATA.un_nombres[u]}`;
+      selUN.appendChild(o);
+    });
+  }
+  // Poblar select Mes
+  const selMes = document.getElementById('alimMes');
+  if (selMes.options.length <= 1) {
+    DATA.periodos.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p; o.textContent = DATA.periodos_label[p];
+      selMes.appendChild(o);
+    });
+  }
+  selUN.value = ALIM_UN;
+  selMes.value = ALIM_MES;
+  document.getElementById('alimSearch').value = ALIM_TXT;
+
+  selUN.onchange = e => { ALIM_UN = e.target.value; renderAlimTable(); };
+  selMes.onchange = e => { ALIM_MES = e.target.value; renderAlimTable(); };
+  document.getElementById('alimSearch').oninput = e => { ALIM_TXT = e.target.value; renderAlimTable(); };
+  document.getElementById('btnExportAlim').onclick = () => {
+    const {arr, periodos} = getAlimFiltrados();
+    const sufijo = ALIM_MES !== 'ALL' ? ALIM_MES : 'todos_meses';
+    const unSuf = ALIM_UN !== 'ALL' ? '_' + ALIM_UN : '';
+    exportarExcelAlim(arr, `alimentadoras_demanda_CNEL_${sufijo}${unSuf}`, periodos);
+  };
+  renderAlimTable();
+}
+
+function getAlimFiltrados() {
+  if (!DATA.alimentadoras) return {arr:[], periodos:DATA.periodos};
+  let arr = DATA.alimentadoras;
+  if (ALIM_UN !== 'ALL') arr = arr.filter(r => r.un === ALIM_UN);
+  if (ALIM_MES !== 'ALL') arr = arr.filter(r => r.periodo === ALIM_MES);
+  if (ALIM_TXT) {
+    const q = ALIM_TXT.toLowerCase();
+    arr = arr.filter(r => (r.subestacion||'').toLowerCase().includes(q) ||
+                          (r.alimentador||'').toLowerCase().includes(q) ||
+                          (r.trafo||'').toLowerCase().includes(q));
+  }
+  const periodos = ALIM_MES === 'ALL' ? DATA.periodos : [ALIM_MES];
+  return {arr, periodos};
+}
+
+function renderAlimTable() {
+  if (!DATA.alimentadoras || DATA.alimentadoras.length === 0) {
+    document.getElementById('alimTableWrap').innerHTML =
+      `<div style="padding:40px;text-align:center;color:var(--muted);">
+        ⚠️ Los datos de alimentadoras no están disponibles.<br>
+        Ejecuta <strong>procesar_local.py</strong> y vuelve a publicar.
+      </div>`;
+    return;
+  }
+  const {arr, periodos} = getAlimFiltrados();
+
+  // Agrupar por UN|sub|trafo|alimentadora
+  const mapa = new Map();
+  arr.forEach(r => {
+    const key = `${r.un}||${r.subestacion}||${r.trafo}||${r.alimentador}`;
+    if (!mapa.has(key)) mapa.set(key, {un:r.un, sub:r.subestacion, trafo:r.trafo, alim:r.alimentador, dems:{}});
+    mapa.get(key).dems[r.periodo] = r.dem_max;
+  });
+
+  const filas = Array.from(mapa.values())
+    .sort((a,b) => a.un.localeCompare(b.un)||a.sub.localeCompare(b.sub)||a.trafo.localeCompare(b.trafo)||a.alim.localeCompare(b.alim));
+
+  if (filas.length === 0) {
+    document.getElementById('alimTableWrap').innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);">Sin datos para los filtros seleccionados.</div>`;
+    document.getElementById('alimCount').textContent = '0 alimentadoras';
+    return;
+  }
+
+  const thPeriodos = periodos.map(p =>
+    `<th style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.08em;color:var(--muted);text-align:right;white-space:nowrap;">${DATA.periodos_label_corto[p]||p}</th>`
+  ).join('');
+
+  const rows = filas.map(f => {
+    const celdas = periodos.map(p => {
+      const v = f.dems[p];
+      return `<td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:${v==null?'var(--muted)':'var(--text)'};">${v==null?'—':v.toFixed(3)}</td>`;
+    }).join('');
+    return `<tr>
+      <td><strong style="font-family:'JetBrains Mono',monospace;font-size:11px;">${f.un}</strong></td>
+      <td style="font-size:12px;">${f.sub}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;text-align:center;">${f.trafo}</td>
+      <td style="font-size:12px;">${f.alim}</td>
+      ${celdas}
+    </tr>`;
+  }).join('');
+
+  document.getElementById('alimTableWrap').innerHTML = `
+    <table class="main" style="font-size:12px;">
+      <thead>
+        <tr>
+          <th>UN</th><th>Subestación</th><th style="text-align:center;">Trafo</th><th>Alimentadora</th>
+          ${thPeriodos}
+        </tr>
+        <tr style="background:var(--bg-card);">
+          <td colspan="4" style="font-size:10px;color:var(--muted);padding:4px 14px;">
+            Valores en MW · Demanda máxima mensual por alimentadora
+          </td>
+          ${periodos.map(()=>'<td></td>').join('')}
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  document.getElementById('alimCount').textContent = `${filas.length} alimentadoras`;
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
